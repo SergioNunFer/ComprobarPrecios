@@ -74,17 +74,29 @@ with tab1:
     termino = st.text_input("¿Qué producto quieres buscar?", value=st.session_state.termino_guardado)
 
     if st.button("Buscar"):
-        if termino.strip():
-            productos_mercadona = buscar_en_mercadona(termino.strip())
-            productos_carrefour = buscar_en_carrefour(termino.strip())
+    if termino.strip():
+        st.session_state.resultados = []
+        st.session_state.termino_guardado = termino.strip()
 
-            resultados = productos_mercadona + productos_carrefour
-            resultados.sort(key=lambda x: float(x["Precio"].replace("€", "").replace(",", ".").split()[0]))
+        with st.spinner("🔍 Buscando productos en Mercadona y Carrefour..."):
+            try:
+                productos_mercadona = buscar_en_mercadona(termino.strip())
+                productos_carrefour = buscar_en_carrefour(termino.strip())
 
-            st.session_state.resultados = resultados
-            st.session_state.termino_guardado = termino.strip()
-        else:
-            st.warning("Introduce un término de búsqueda.")
+                resultados = productos_mercadona + productos_carrefour
+
+                if resultados:
+                    resultados.sort(key=lambda x: float(x["Precio"].replace("€", "").replace(",", ".").split()[0]))
+                    st.session_state.resultados = resultados
+                    st.success(f"✅ Se encontraron {len(resultados)} productos.")
+                else:
+                    st.info("No se encontraron productos con ese término.")
+
+            except Exception as e:
+                st.error(f"❌ Error al buscar productos: {str(e)}")
+
+    else:
+        st.warning("⚠️ Introduce un término de búsqueda.")
 
     resultados = st.session_state.resultados
     if resultados:
