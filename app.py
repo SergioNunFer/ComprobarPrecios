@@ -31,23 +31,29 @@ def buscar_en_carrefour(termino):
             continue
     return productos
 
-# ---- Función para buscar productos en Mercadona vía API no oficial ----
+# ---- Función para buscar productos en Mercadona (usando Algolia) ----
 def buscar_en_mercadona(termino):
+    url = "https://7uzjkl1dj0-dsn.algolia.net/1/indexes/products_prod_vlc1_es/query"
+    payload = {
+        "params": f"query={termino}&clickAnalytics=true&analyticsTags=[\"web\"]"
+    }
+    headers = {
+        "X-Algolia-API-Key": "9d8f2e39e90df472b4f2e559a116fe17",
+        "X-Algolia-Application-Id": "7UZJKL1DJ0",
+        "Content-Type": "application/json"
+    }
+    r = requests.post(url, json=payload, headers=headers)
     productos = []
-    url = f"https://tienda.mercadona.es/api/search/?query={termino}"
-    r = requests.get(url)
     if r.status_code == 200:
-        data = r.json()
-        items = data.get("results", [])
-        for i, item in enumerate(items):
-            nombre = item.get("display_name", "Producto sin nombre")
-            precio = f"{item.get('price_instructions', {}).get('unit_price', 0):.2f} €"
-            imagen = item.get("thumbnail", "https://via.placeholder.com/100")
+        for i, hit in enumerate(r.json().get("hits", [])):
+            nombre = hit.get("display_name", "")
+            precio = hit.get("price_instructions", {}).get("unit_price", 0)
+            imagen = hit.get("thumbnail", "https://via.placeholder.com/100")
 
             productos.append({
                 "id": i,
                 "Producto": nombre,
-                "Precio": precio,
+                "Precio": f"{precio} €",
                 "Imagen": imagen,
                 "Supermercado": "Mercadona"
             })
@@ -77,27 +83,25 @@ with tab1:
         if termino.strip():
             st.session_state.resultados = []
             st.session_state.termino_guardado = termino.strip()
-    
+
             with st.spinner("🔍 Buscando productos en Mercadona y Carrefour..."):
                 try:
                     productos_mercadona = buscar_en_mercadona(termino.strip())
                     productos_carrefour = buscar_en_carrefour(termino.strip())
-    
+
                     resultados = productos_mercadona + productos_carrefour
-    
+
                     if resultados:
                         resultados.sort(key=lambda x: float(x["Precio"].replace("€", "").replace(",", ".").split()[0]))
                         st.session_state.resultados = resultados
                         st.success(f"✅ Se encontraron {len(resultados)} productos.")
                     else:
                         st.info("No se encontraron productos con ese término.")
-    
+
                 except Exception as e:
                     st.error(f"❌ Error al buscar productos: {str(e)}")
-
-    else:
-        st.warning("⚠️ Introduce un término de búsqueda.")
-
+        else:
+            st.warning("⚠️ Introduce un término de búsqueda.")
 
     resultados = st.session_state.resultados
     if resultados:
