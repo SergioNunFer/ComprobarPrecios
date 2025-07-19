@@ -98,6 +98,7 @@ with tab1:
     else:
         st.warning("⚠️ Introduce un término de búsqueda.")
 
+
     resultados = st.session_state.resultados
     if resultados:
         st.success(f"Se encontraron {len(resultados)} productos:")
